@@ -16,36 +16,38 @@ public:
     double weight;
 };
 
-struct DijkstraAlgorithmResults {
+struct AlgorithmResults {
 public:
     vector<int> path;
     vector<double> distance;
 };
 
+
 void initializeGraph(int &picks, int &ribs, vector<Rib> &structRibs);
 
 void sortRibs(int &picks, int &ribs, vector<Rib> &structRibs);
 
-vector<double> BelmanFordAlgorithm(int picks, vector<Rib> &structRibs, int startPick);
+AlgorithmResults BelmanFordAlgorithm(int picks, vector<Rib> &structRibs, int startPick);
 
 int findMin(const double *calculationsMatrix, int i, int picks);
 
 int PickExists(int pick, vector<Rib> structRibs, vector<bool> isMarked, vector<bool> isRibUsed);
 
-DijkstraAlgorithmResults DijkstraAlgorithm(const int &picks, int &ribs, vector<Rib> &structRibs, int startPick);
+AlgorithmResults DijkstraAlgorithm(const int &picks, int &ribs, vector<Rib> &structRibs, int startPick);
 
-void JonsonAlgorithm(const int &picks, int &ribs, vector<Rib> &structRibs);
+AlgorithmResults JonsonAlgorithm(const int &picks, int &ribs, vector<Rib> &structRibs, int startPick);
 
-void printMatrix(const double *matrix, int picks);
+void printShortestDistance(const vector<double> &distance, int startPick);
+
+void printShortestPath(const vector<int> &path, int startPick, int endPick);
+
+void makeMenu(int &picks, int &ribs, vector<Rib> &structRibs);
 
 int main() {
     vector<Rib> ribsList;
     int n = 0, m = 0;
     SetConsoleOutputCP(CP_UTF8);
-    initializeGraph(n, m, ribsList);
-    sortRibs(n, m, ribsList);
-    BelmanFordAlgorithm(n, ribsList, 1);
-    JonsonAlgorithm(n, m, ribsList);
+    makeMenu(n, m, ribsList);
     return 0;
 }
 
@@ -81,24 +83,34 @@ void sortRibs(int &picks, int &ribs, vector<Rib> &structRibs) {
     }
 }
 
-vector<double> BelmanFordAlgorithm(int picks, vector<Rib> &structRibs, int startPick, int endP) {
-    vector<double> distance(picks);
-    for (double &i : distance) {
-        i = DBL_MAX;
-    }
+AlgorithmResults BelmanFordAlgorithm(int picks, vector<Rib> &structRibs, int startPick) {
+    vector<double> distance(picks, DBL_MAX);
+
+    vector<int> prev(picks, -1);
+
     distance[startPick - 1] = 0;
     for (int i = 0; i < picks - 1; i++) {
         for (auto &structRib : structRibs) {
-            if (distance[structRib.end - 1] > distance[structRib.start - 1] + structRib.weight)
+            if (distance[structRib.end - 1] > distance[structRib.start - 1] + structRib.weight) {
                 distance[structRib.end - 1] = distance[structRib.start - 1] + structRib.weight;
+                prev[structRib.end - 1] = structRib.start;
+            }
         }
     }
-    return distance;
+
+    for (auto &structRib : structRibs) {
+        if (distance[structRib.end - 1] > distance[structRib.start - 1] + structRib.weight) return {};
+    }
+
+    AlgorithmResults results;
+    results.distance = distance;
+    results.path = prev;
+    return results;
 }
 
-void JonsonAlgorithm(const int &picks, int &ribs, vector<Rib> &structRibs) {
+AlgorithmResults JonsonAlgorithm(const int &picks, int &ribs, vector<Rib> &structRibs, int startPick) {
     vector<Rib> structRibsD = structRibs;
-
+    AlgorithmResults results;
     for (int i = 0; i < picks; i++) {
         Rib tmpRib{};
         tmpRib.start = picks + 1;
@@ -107,7 +119,7 @@ void JonsonAlgorithm(const int &picks, int &ribs, vector<Rib> &structRibs) {
         structRibsD.push_back(tmpRib);
     }
 
-    vector<double> h = BelmanFordAlgorithm(picks + 1, structRibsD, picks + 1);
+    vector<double> h = BelmanFordAlgorithm(picks + 1, structRibsD, picks + 1).distance;
 
     for (auto &structRib : structRibs) {
         structRib.weight = structRib.weight + h[structRib.start - 1] - h[structRib.end - 1];
@@ -115,8 +127,9 @@ void JonsonAlgorithm(const int &picks, int &ribs, vector<Rib> &structRibs) {
 
     auto *distanceMatrix = new double[picks * picks];
 
-    for (int i = 0; i<picks;  i++) {
+    for (int i = 0; i < picks; i++) {
         vector<double> distance = DijkstraAlgorithm(picks, ribs, structRibs, (i + 1)).distance;
+        if (i + 1 == startPick) results.path = DijkstraAlgorithm(picks, ribs, structRibs, (i + 1)).path;
         for (int j = 0; j < picks; j++) {
             *(distanceMatrix + i * picks + j) = distance[j];
         }
@@ -127,9 +140,15 @@ void JonsonAlgorithm(const int &picks, int &ribs, vector<Rib> &structRibs) {
             *(distanceMatrix + i * picks + j) = *(distanceMatrix + i * picks + j) - h[i] + h[j];
         }
     }
+    vector<double> startPickDistance(picks);
+    for (int i = 0; i < picks; i++) {
+        startPickDistance[i] = (*(distanceMatrix + startPick * picks + i));
+    }
+    results.distance = startPickDistance;
+    return results;
 }
 
-DijkstraAlgorithmResults DijkstraAlgorithm(const int &picks, int &ribs, vector<Rib> &structRibs, int startPick) {
+AlgorithmResults DijkstraAlgorithm(const int &picks, int &ribs, vector<Rib> &structRibs, int startPick) {
 
     double currentDistance = 0;
     int currentPick = startPick;
@@ -137,7 +156,7 @@ DijkstraAlgorithmResults DijkstraAlgorithm(const int &picks, int &ribs, vector<R
     vector<double> picksDistance(picks);
     auto *calculationsMatrix = new double[picks * picks];
     vector<bool> isRibUsed(structRibs.size());
-    vector<int> path;
+    vector<int> path(picks, 0);
 
     for (int i = 0; i < picks; i++) {
         for (int j = 0; j < picks; j++) {
@@ -147,8 +166,7 @@ DijkstraAlgorithmResults DijkstraAlgorithm(const int &picks, int &ribs, vector<R
 
     picksDistance[currentPick - 1] = currentDistance;
     isMarked[currentPick - 1] = true;
-    *(calculationsMatrix + 0 * picks + (currentPick-1)) = currentDistance;
-    path.push_back(currentPick);
+    *(calculationsMatrix + 0 * picks + (currentPick - 1)) = currentDistance;
 
     for (int i = 1; i < picks; i++) {
         while (PickExists(currentPick, structRibs, isMarked, isRibUsed)) {
@@ -160,19 +178,19 @@ DijkstraAlgorithmResults DijkstraAlgorithm(const int &picks, int &ribs, vector<R
 
             if (*(calculationsMatrix + (i - 1) * picks + pickIndex) > currentDistance + structRibs[ribIndex].weight) {
                 *(calculationsMatrix + i * picks + pickIndex) = currentDistance + structRibs[ribIndex].weight;
+                path[pickIndex] = currentPick;
             } else *(calculationsMatrix + i * picks + pickIndex) = *(calculationsMatrix + (i - 1) * picks + pickIndex);
         }
 
         int minPickIndex = findMin(calculationsMatrix, i, picks);
         currentPick = minPickIndex + 1;
-        path.push_back(currentPick);
         currentDistance = *(calculationsMatrix + i * picks + minPickIndex);
         picksDistance[minPickIndex] = currentDistance;
         isMarked[minPickIndex] = true;
-        for(auto && ribUsed : isRibUsed) ribUsed=false;
+        for (auto &&ribUsed : isRibUsed) ribUsed = false;
     }
 
-    DijkstraAlgorithmResults results{};
+    AlgorithmResults results{};
     results.distance = picksDistance;
     results.path = path;
     return results;
@@ -200,12 +218,62 @@ int findMin(const double *calculationsMatrix, int i, int picks) {
     return std::distance(tmpVector.begin(), result);
 }
 
-void printMatrix(const double *matrix, int picks) {
-    for (int i = 0; i < picks; i++) {
-        for (int j = 0; j < picks; j++){
-            if (*(matrix + i * picks + j) != DBL_MAX) cout << *(matrix + i * picks + j) << setw(5);
-            else cout << "∞"<<setw(5);
+void printShortestDistance(const vector<double> &distance, int startPick) {
+    cout << "Відстань від " << startPick << " складає\n";
+    for (int i = 1; i < distance.size(); i++) {
+        cout << "До вершини " << i + 1 << ": " << distance[i] << endl;
+    }
+}
+
+void printShortestPath(const vector<int> &path, int startPick, int endPick) {
+    int pickIndex = endPick - 1;
+    vector<int> tmpVector;
+    cout << "Шлях від " << startPick << "до " << endPick << ": ";
+    while (path[pickIndex] != startPick) {
+        tmpVector.push_back(path[pickIndex]);
+        pickIndex = path[pickIndex] - 1;
+    }
+    cout << startPick<<setw(2);
+    for (int i = tmpVector.size() - 1; i >= 0; i--){
+        cout<<tmpVector[i]<<setw(2);
+    }
+    cout<<endPick;
+}
+
+void makeMenu(int &picks, int &ribs, vector<Rib> &structRibs) {
+
+    int startPick;
+    int endPick;
+    bool isJonson;
+
+    initializeGraph(picks, ribs, structRibs);
+    sortRibs(picks, ribs, structRibs);
+
+    cout << " Введіть 0 якщо хочете скористуватись алгоритмом Белмана-Форда та 1 якщо алгоритмом Джонсона";
+    cin >> isJonson;
+    cout << endl;
+
+    if (isJonson) {
+
+        cout << "Введіть маршрут між вершинами який ви хочете побачити. Вершини можуть бути від 1 до " << picks;
+        cin >> startPick >> endPick;
+        AlgorithmResults results = JonsonAlgorithm(picks, ribs, structRibs, startPick);
+        if (results.distance.empty()) cout << "В графі є відємні ваги" << endl;
+        else {
+
+            printShortestDistance(results.distance, startPick);
+            printShortestPath(results.path, startPick, endPick);
         }
-        cout<< endl;
+    } else {
+        cout << "Введіть вершину від 1 до " << picks << "від якої хочете почати виконувати алгоритм";
+        cin >> startPick >> endPick;
+        cout << endl;
+        AlgorithmResults results = BelmanFordAlgorithm(picks, structRibs, startPick);
+        if (results.distance.empty()) cout << "В графі є відємні ваги" << endl;
+        else {
+
+            printShortestDistance(results.distance, startPick);
+            printShortestPath(results.path, startPick, endPick);
+        }
     }
 }
