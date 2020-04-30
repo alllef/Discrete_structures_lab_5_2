@@ -226,7 +226,7 @@ void printShortestDistance(const vector<double> &distance, int startPick) {
        if(i!=startPick-1) cout << "До вершини " << i + 1 << ": " << distance[i] << endl;
     }
 }
-//
+
 void printShortestPath(const vector<int> &path, int startPick, int endPick) {
     int pickIndex = endPick - 1;
     vector<int> tmpVector;
