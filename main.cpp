@@ -141,9 +141,11 @@ AlgorithmResults JonsonAlgorithm(const int &picks, int &ribs, vector<Rib> &struc
         }
     }
     vector<double> startPickDistance(picks);
+
     for (int i = 0; i < picks; i++) {
-        startPickDistance[i] = (*(distanceMatrix + startPick * picks + i));
+        startPickDistance[i] = (*(distanceMatrix + (startPick-1) * picks + i));
     }
+
     results.distance = startPickDistance;
     return results;
 }
@@ -220,15 +222,15 @@ int findMin(const double *calculationsMatrix, int i, int picks) {
 
 void printShortestDistance(const vector<double> &distance, int startPick) {
     cout << "Відстань від " << startPick << " складає\n";
-    for (int i = 1; i < distance.size(); i++) {
-        cout << "До вершини " << i + 1 << ": " << distance[i] << endl;
+    for (int i = 0; i < distance.size(); i++) {
+       if(i!=startPick-1) cout << "До вершини " << i + 1 << ": " << distance[i] << endl;
     }
 }
 
 void printShortestPath(const vector<int> &path, int startPick, int endPick) {
     int pickIndex = endPick - 1;
     vector<int> tmpVector;
-    cout << "Шлях від " << startPick << "до " << endPick << ": ";
+    cout << "Шлях від " << startPick << " до " << endPick << ": ";
     while (path[pickIndex] != startPick) {
         tmpVector.push_back(path[pickIndex]);
         pickIndex = path[pickIndex] - 1;
@@ -254,25 +256,28 @@ void makeMenu(int &picks, int &ribs, vector<Rib> &structRibs) {
     cout << endl;
 
     if (isJonson) {
+        cout << "Введіть вершину від 1 до " << picks << "від якої хочете почати виконувати алгоритм";
 
-        cout << "Введіть маршрут між вершинами який ви хочете побачити. Вершини можуть бути від 1 до " << picks;
-        cin >> startPick >> endPick;
+        cin >> startPick;
         AlgorithmResults results = JonsonAlgorithm(picks, ribs, structRibs, startPick);
         if (results.distance.empty()) cout << "В графі є відємні ваги" << endl;
         else {
-
             printShortestDistance(results.distance, startPick);
+            cout << "Введіть маршрут до вершини який ви хочете побачити. Вершини можуть бути від 1 до " << picks;
+            cin>>endPick;
+
             printShortestPath(results.path, startPick, endPick);
         }
     } else {
         cout << "Введіть вершину від 1 до " << picks << "від якої хочете почати виконувати алгоритм";
-        cin >> startPick >> endPick;
+        cin >> startPick;
         cout << endl;
         AlgorithmResults results = BelmanFordAlgorithm(picks, structRibs, startPick);
         if (results.distance.empty()) cout << "В графі є відємні ваги" << endl;
         else {
-
             printShortestDistance(results.distance, startPick);
+            cout << "Введіть маршрут до вершини який ви хочете побачити. Вершини можуть бути від 1 до " << picks;
+            cin>>endPick;
             printShortestPath(results.path, startPick, endPick);
         }
     }
